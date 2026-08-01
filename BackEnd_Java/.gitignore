@@ -1,0 +1,16 @@
+# Maven / Java
+target/
+*.class
+
+# IDE
+.idea/
+.settings/
+.classpath
+.project
+.metadata/
+.factorypath
+*.iml
+
+src/main/resources/application-local.properties
+
+bin/

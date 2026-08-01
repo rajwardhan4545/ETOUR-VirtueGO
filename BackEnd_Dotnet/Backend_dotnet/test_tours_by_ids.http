@@ -1,0 +1,5 @@
+###
+POST https://localhost:7213/api/tours/by-category-ids
+Content-Type: application/json
+
+[1, 2, 3]

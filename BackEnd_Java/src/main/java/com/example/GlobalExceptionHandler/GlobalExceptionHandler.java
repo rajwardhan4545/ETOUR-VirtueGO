@@ -1,0 +1,54 @@
+package com.example.GlobalExceptionHandler;
+
+import com.example.util.ErrorResponse1;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    // Validation Error
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse1> handleValidationErrors(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        return new ResponseEntity<>(new ErrorResponse1(msg, 400), HttpStatus.BAD_REQUEST);
+    }
+
+    // JWT Authentication Error
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse1> handleBadCredentials(BadCredentialsException ex) {
+        return new ResponseEntity<>(new ErrorResponse1("Invalid username or password", 401), HttpStatus.UNAUTHORIZED);
+    }
+
+    // OAuth2 Error
+    @ExceptionHandler(OAuth2AuthenticationException.class)
+    public ResponseEntity<ErrorResponse1> handleOAuth2(OAuth2AuthenticationException ex) {
+        return new ResponseEntity<>(new ErrorResponse1("OAuth authentication failed", 401), HttpStatus.UNAUTHORIZED);
+    }
+
+    // DB Constraint / SQL Exception
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse1> handleDBErrors(DataIntegrityViolationException ex) {
+        return new ResponseEntity<>(new ErrorResponse1("Database error occurred", 500), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // Resource not found
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse1> handleNotFound(ResourceNotFoundException ex) {
+        return new ResponseEntity<>(new ErrorResponse1(ex.getMessage(), 404), HttpStatus.NOT_FOUND);
+    }
+
+    // Fallback for other exceptions
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse1> handleAll(Exception ex) {
+        return new ResponseEntity<>(new ErrorResponse1("Something went wrong", 500), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+
