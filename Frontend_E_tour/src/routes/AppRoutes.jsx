@@ -12,6 +12,7 @@ import CustomerProfile from "../pages/CustomerProfile";
 import CustomerBookings from "../pages/CustomerBookings";
 import AdminDashboard from "../pages/Admin/Dashboard";
 import HealthPage from "../pages/Health";
+import AiCustomerCarePage from "../pages/AiCustomerCarePage";
 
 const AppRoutes = () => {
   return (
@@ -31,6 +32,8 @@ const AppRoutes = () => {
       <Route path="/customer/bookings" element={<CustomerBookings />} />
       <Route path="/admin/*" element={<AdminDashboard />} />
       <Route path="/health" element={<HealthPage />} />
+      <Route path="/ai-concierge" element={<AiCustomerCarePage />} />
+      <Route path="/customer-care" element={<AiCustomerCarePage />} />
     </Routes>
   );
 };

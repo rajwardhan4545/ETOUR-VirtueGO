@@ -4,6 +4,7 @@ import { BookingProvider } from './context/BookingContext';
 import Navbar from './components/Layout/Navbar';
 import Footer from './components/Layout/Footer';
 import AppRoutes from './routes/AppRoutes';
+import AiCustomerCareWidget from './components/AI/AiCustomerCareWidget';
 import './index.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -18,6 +19,7 @@ function App() {
             <AppRoutes />
           </main>
           <Footer />
+          <AiCustomerCareWidget />
         </div>
       </BookingProvider>
       <ToastContainer

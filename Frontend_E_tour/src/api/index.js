@@ -126,4 +126,11 @@ export const healthAPI = {
   getHealth: () => api.get('/actuator/health'), // Java actuator, C# might return 404
 };
 
+export const customerCareAiAPI = {
+  chat: (data) => api.post('/api/ai/customer-care/chat', data),
+  recommendTours: (data) => api.post('/api/ai/customer-care/recommend-tours', data),
+  getFaq: (topic = 'cancellation') => api.get('/api/ai/customer-care/faq', { params: { topic } }),
+  getHealth: () => api.get('/api/ai/customer-care/health'),
+};
+
 export default api;

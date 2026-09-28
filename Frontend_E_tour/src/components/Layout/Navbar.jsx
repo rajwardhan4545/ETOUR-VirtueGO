@@ -40,6 +40,9 @@ const Navbar = () => {
             <Link to="/tours" className="text-gray-700 hover:text-blue-600 transition-colors">
               Tours
             </Link>
+            <Link to="/ai-concierge" className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+              <span>✨ AI Concierge</span>
+            </Link>
             {isAuthenticated && (
               <>
                 <Link to="/customer/bookings" className="text-gray-700 hover:text-blue-600 transition-colors">
@@ -116,6 +119,13 @@ const Navbar = () => {
               className="block text-gray-700 hover:text-blue-600 font-medium"
             >
               Tours
+            </Link>
+            <Link
+              to="/ai-concierge"
+              onClick={() => setIsMenuOpen(false)}
+              className="block text-blue-600 hover:text-blue-700 font-semibold"
+            >
+              ✨ AI Concierge
             </Link>
             {isAuthenticated ? (
               <>
