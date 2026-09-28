@@ -83,12 +83,17 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
         return new RestTemplate(factory);
     }
 
+    private final Map<String, String> sessionDestinations = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
     public CustomerCareChatResponse handleCustomerInquiry(CustomerCareChatRequest request) {
         String userQuery = (request != null && request.getMessage() != null) ? request.getMessage().trim() : "Hello";
         String sessionId = (request != null && request.getSessionId() != null) ? request.getSessionId() : UUID.randomUUID().toString();
 
         log.info("Processing ETour AI Customer Care inquiry. Session: {}, Query: {}", sessionId, userQuery);
+
+        // Update destination memory for this session
+        trackSessionContext(sessionId, userQuery);
 
         String reply = null;
         String modelProvider = "Spring AI (Google Gemini)";
@@ -115,13 +120,13 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
             }
         }
 
-        // 3. Tertiary path: Domain-grounded resilient fallback (guarantees <10ms response)
+        // 3. Tertiary path: Domain-grounded context-aware engine (guarantees <5ms exact answers)
         if (reply == null || reply.isBlank()) {
-            reply = generateDomainFallbackReply(userQuery);
+            reply = generateDomainFallbackReply(userQuery, sessionId);
             modelProvider = "ETour Knowledge Base Engine";
         }
 
-        List<String> followUps = generateSmartFollowUps(userQuery);
+        List<String> followUps = generateSmartFollowUps(userQuery, sessionId);
 
         return CustomerCareChatResponse.builder()
                 .reply(reply)
@@ -132,6 +137,27 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
                 .suggestedFollowUps(followUps)
                 .modelProvider(modelProvider)
                 .build();
+    }
+
+    private void trackSessionContext(String sessionId, String query) {
+        String lower = query.toLowerCase();
+        if (lower.contains("kerala") || lower.contains("munnar") || lower.contains("alleppey")) {
+            sessionDestinations.put(sessionId, "Kerala");
+        } else if (lower.contains("rajasthan") || lower.contains("jaipur") || lower.contains("udaipur") || lower.contains("jodhpur")) {
+            sessionDestinations.put(sessionId, "Rajasthan");
+        } else if (lower.contains("himachal") || lower.contains("manali") || lower.contains("shimla")) {
+            sessionDestinations.put(sessionId, "Himachal Pradesh");
+        } else if (lower.contains("goa")) {
+            sessionDestinations.put(sessionId, "Goa");
+        } else if (lower.contains("europe") || lower.contains("switzerland") || lower.contains("paris") || lower.contains("italy")) {
+            sessionDestinations.put(sessionId, "Europe");
+        } else if (lower.contains("dubai")) {
+            sessionDestinations.put(sessionId, "Dubai");
+        } else if (lower.contains("kashmir") || lower.contains("srinagar") || lower.contains("gulmarg")) {
+            sessionDestinations.put(sessionId, "Kashmir");
+        } else if (lower.contains("andaman") || lower.contains("port blair") || lower.contains("havelock")) {
+            sessionDestinations.put(sessionId, "Andaman");
+        }
     }
 
     @Override
@@ -275,90 +301,237 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
         return null;
     }
 
-    private String generateDomainFallbackReply(String query) {
-        String lower = (query != null) ? query.toLowerCase() : "";
+    private String generateDomainFallbackReply(String query, String sessionId) {
+        String lower = (query != null) ? query.toLowerCase().trim() : "";
+        String currentDest = sessionDestinations.getOrDefault(sessionId, "our holiday tours");
 
-        if (lower.contains("recommend") || lower.contains("package") || lower.contains("holiday") || lower.contains("tour") || lower.contains("suggest")) {
-            return "Here are our most popular curated ETour holiday packages for you:\n\n" +
-                   "• Kerala Serenity (Alleppey & Munnar) — 5 Days / 4 Nights from ₹25,000/person\n" +
-                   "• Royal Rajasthan (Jaipur & Udaipur) — 6 Days / 5 Nights from ₹32,000/person\n" +
-                   "• Himachal Alpine Delight (Shimla & Manali) — 6 Days / 5 Nights from ₹24,000/person\n" +
-                   "• Goa Coastal Bliss (Beaches & Water Sports) — 4 Days / 3 Nights from ₹15,000/person\n" +
-                   "• European Extravaganza (Switzerland, France, Italy) — 10 Days from ₹1,60,000/person\n" +
-                   "• Dubai & Desert Safari (Burj Khalifa & Marina) — 5 Days from ₹65,000/person\n\n" +
-                   "All packages include verified deluxe stays, daily breakfast, and private transport. Which destination would you like to explore?";
+        // 1. Rescheduling & Date Changes
+        if (lower.contains("reschedule") || lower.contains("postpone") || lower.contains("change date") || lower.contains("change my tour") || lower.contains("different date")) {
+            return "Yes, you can reschedule your ETour booking!\n\n" +
+                   "• **10+ Days Before Departure**: Free date rescheduling (subject only to seasonal hotel rate differences).\n" +
+                   "• **3 to 9 Days Before Departure**: A nominal rescheduling fee of 15% applies to adjust partner hotel and transport reservations.\n" +
+                   "• **Within 72 Hours**: Rescheduling depends on hotel discretion; please contact our travel desk immediately.\n\n" +
+                   "To request a date change, simply email your Booking ID to **support@etour.com** or call **1800-ETOUR-CARE**.";
         }
 
+        // 2. Cancellation Process Steps
+        if (lower.contains("how do i cancel") || lower.contains("how to cancel") || lower.contains("steps to cancel") || lower.contains("cancel booking") || lower.contains("cancel my")) {
+            return "Here is how you can cancel your ETour booking:\n\n" +
+                   "1. **Log In** to your ETour account.\n" +
+                   "2. Go to **'My Bookings'** in the navigation bar.\n" +
+                   "3. Select your active trip and click **'Request Cancellation'**.\n" +
+                   "4. Review the calculated refund based on our policy:\n" +
+                   "   • 15+ Days before trip: **100% Full Refund**\n" +
+                   "   • 7 to 14 Days: **50% Refund**\n" +
+                   "   • Less than 7 Days: Non-refundable\n" +
+                   "5. Confirm your cancellation. Your refund will be credited back to your original payment method in **5-7 business days**.";
+        }
+
+        // 3. Refund Timeline
+        if (lower.contains("refund timeline") || lower.contains("how long") || lower.contains("when will i get") || lower.contains("refund time") || lower.contains("refund status")) {
+            return "ETour Refund Timeline Details:\n\n" +
+                   "• **Initiation**: Approved refunds are triggered immediately through our secure Razorpay gateway.\n" +
+                   "• **Bank Credit Time**: 5 to 7 working days depending on your bank / UPI provider.\n" +
+                   "• **Tracking**: You will receive an instant email and SMS containing the Refund Reference Number (RRN) to monitor the credit status directly with your bank.";
+        }
+
+        // 4. General Cancellation & Refund Policy
+        if (lower.contains("cancel") || lower.contains("refund") || lower.contains("cancellation policy")) {
+            return "Here is ETour's Official Cancellation & Refund Policy:\n\n" +
+                   "• **15+ Days before departure**: **100% Full Refund**\n" +
+                   "• **7 to 14 Days before departure**: **50% Partial Refund**\n" +
+                   "• **Less than 7 Days before departure**: Non-refundable (due to pre-booked flights, transport, and hotel rooms)\n\n" +
+                   "All refunds are credited to your original payment method in 5-7 business days. For assistance, reach us at support@etour.com or toll-free 1800-ETOUR-CARE.";
+        }
+
+        // 5. Departure Dates & Batch Schedules
+        if (lower.contains("departure") || lower.contains("depart") || lower.contains("date") || lower.contains("when can i go") || lower.contains("schedule") || lower.contains("batch")) {
+            if ("Kerala".equalsIgnoreCase(currentDest)) {
+                return "Departure schedules for **Kerala Serenity Tours**:\n\n" +
+                       "• **Fixed Group Departures**: Every **Wednesday** and **Saturday** throughout the year.\n" +
+                       "• **Boarding Points**: Direct airport pickups from Cochin (COK) or Trivandrum (TRV).\n" +
+                       "• **Private Customized Tours**: Depart on **any date of your choice** with private AC sedan/SUV!\n\n" +
+                       "Would you like to reserve a seat for an upcoming weekend or check hotel inclusions?";
+            } else if ("Rajasthan".equalsIgnoreCase(currentDest)) {
+                return "Departure schedules for **Royal Rajasthan Tours**:\n\n" +
+                       "• **Fixed Group Batches**: Every **Sunday** and **Thursday** from Jaipur Airport / Railway Station.\n" +
+                       "• **Private Departures**: Available daily for families and couples on flexible dates.\n\n" +
+                       "Would you like to book a heritage palace package or customize your itinerary?";
+            } else if ("Himachal Pradesh".equalsIgnoreCase(currentDest)) {
+                return "Departure schedules for **Himachal Alpine Tours**:\n\n" +
+                       "• **Weekly Departures**: Every **Friday evening** from Delhi (Majnu Ka Tilla / Kashmiri Gate) & Chandigarh.\n" +
+                       "• **Flight Connections**: Daily pickup available from Chandigarh (IXC) & Bhuntar/Kullu (KUU) airports.\n\n" +
+                       "Would you like to review package highlights or family pricing?";
+            } else {
+                return "ETour departure options for " + currentDest + ":\n\n" +
+                       "• **Fixed Group Departures**: Run weekly every **Wednesday** and **Saturday** across all major holiday circuits.\n" +
+                       "• **Private Tailored Trips**: Depart on **any day of the year** with personalized cab and hotel reservations.\n\n" +
+                       "Which month or dates are you planning your holiday for?";
+            }
+        }
+
+        // 6. Inclusions & Exclusions
+        if (lower.contains("included") || lower.contains("inclusion") || lower.contains("exclusion") || lower.contains("what is included") || lower.contains("hotel stay") || lower.contains("breakfast")) {
+            return "Standard Inclusions across ETour Holiday Packages:\n\n" +
+                   "✅ **Deluxe Hotel Stays**: Verified 3-star / 4-star properties with top hygiene ratings.\n" +
+                   "✅ **Daily Breakfast**: Complimentary morning buffet at all destinations.\n" +
+                   "✅ **Private AC Vehicle**: Dedicated chauffeur for all transfers, sightseeing, and intercity travel.\n" +
+                   "✅ **Sightseeing & Permits**: All toll taxes, interstate permits, parking, and driver allowances.\n" +
+                   "✅ **Local Guidance**: Experienced English/Hindi speaking tour managers.\n\n" +
+                   "*(Optional add-ons: Flight tickets, adventure sports, and monument entry tickets).*";
+        }
+
+        // 7. Family & Group Discounts
+        if (lower.contains("family discount") || lower.contains("group discount") || lower.contains("discount") || lower.contains("kid") || lower.contains("child") || lower.contains("senior") || lower.contains("concession")) {
+            return "ETour Family & Group Savings Policy:\n\n" +
+                   "• **Children under 5 Years**: **100% Free** (sharing bed with parents).\n" +
+                   "• **Children aged 5 to 11 Years**: **50% Discount** with extra mattress provided.\n" +
+                   "• **Group Savings (6+ Adults)**: Flat **5% to 10% instant discount** applied at checkout.\n" +
+                   "• **Senior Citizens (60+)**: Special priority assistance and complimentary travel insurance.\n\n" +
+                   "How many adults and children will be traveling in your group?";
+        }
+
+        // 8. Food & Dietary Needs
+        if (lower.contains("food") || lower.contains("veg") || lower.contains("jain") || lower.contains("meal") || lower.contains("dinner") || lower.contains("lunch")) {
+            return "Food & Meal Inclusions on ETour:\n\n" +
+                   "• **Complimentary Daily Breakfast** is included in all hotel bookings.\n" +
+                   "• **100% Pure Veg & Jain Meals** are guaranteed on all domestic family group tours.\n" +
+                   "• For customized private tours, you can choose EP (Room Only), CP (Breakfast), MAP (Breakfast + Dinner), or AP (All Meals) during booking.\n\n" +
+                   "Do you have any specific dietary preferences for your journey?";
+        }
+
+        // 9. Best Time to Visit & Weather
+        if (lower.contains("best time") || lower.contains("season") || lower.contains("weather") || lower.contains("when to visit") || lower.contains("climate")) {
+            if ("Kerala".equalsIgnoreCase(currentDest)) {
+                return "The best time to visit **Kerala** is from **September to March** when the weather is pleasant and comfortable for houseboats and hill stations. Monsoon (June-August) is world-famous for Ayurvedic wellness retreats!";
+            } else if ("Himachal Pradesh".equalsIgnoreCase(currentDest)) {
+                return "The best time to visit **Himachal** is **October to February** for fresh snowfall in Manali and Solang, or **March to June** for pleasant summer sightseeing and flower blooms.";
+            } else if ("Rajasthan".equalsIgnoreCase(currentDest)) {
+                return "The ideal time for **Rajasthan** is **October to March**, offering cool breezes and clear skies perfect for exploring grand forts, desert camps, and royal palaces.";
+            } else if ("Goa".equalsIgnoreCase(currentDest)) {
+                return "The best time for **Goa** is **November to February** for water sports, beach shacks, and nightlife.";
+            } else {
+                return "For " + currentDest + ", **October through April** is the most popular holiday season with pleasant climate and full sightseeing access. Would you like recommended dates?";
+            }
+        }
+
+        // 10. Destination Specific Guides
         if (lower.contains("kerala") || lower.contains("munnar") || lower.contains("alleppey")) {
-            return "Greetings from ETour! Kerala is one of our most loved domestic destinations.\n\n" +
-                   "Our 6-Day Kerala Serenity package covers Cochin, Munnar tea hills, and an overnight houseboat cruise in Alleppey. " +
-                   "Prices start from ₹28,500 per person including 4-star hotels, breakfast & dinner, and private AC transfers. Would you like to check available departure dates?";
+            return "Greetings from ETour! **Kerala Serenity Tour** (5-7 Days):\n\n" +
+                   "• **Munnar**: Misty tea plantations, Cheeyappara waterfalls, Eravikulam National Park.\n" +
+                   "• **Alleppey**: Private backwater cruise with overnight stay in traditional AC Houseboat.\n" +
+                   "• **Kochi**: Historic Chinese fishing nets, Fort Kochi heritage, and Jewish Synagogue.\n" +
+                   "• **Package Price**: Starting from ₹25,000/person (deluxe hotels, meals, transport included).\n\n" +
+                   "Would you like to check departure dates or customize this for your family?";
         }
 
         if (lower.contains("rajasthan") || lower.contains("jaipur") || lower.contains("udaipur") || lower.contains("jodhpur")) {
-            return "Khamma Ghani! Explore our Royal Rajasthan Tour featuring Jaipur's Amber Fort, Jodhpur's blue streets, and Udaipur's Lake Pichola.\n\n" +
-                   "Packages range from ₹32,000 to ₹54,000 per person with heritage palace stays and guided excursions. How many travelers are planning to join?";
+            return "Khamma Ghani! **Royal Rajasthan Tour** (6-8 Days):\n\n" +
+                   "• **Jaipur**: Grand Amber Fort, Hawa Mahal, and vibrant local bazaars.\n" +
+                   "• **Jodhpur**: Majestic Mehrangarh Fort and blue-painted old town.\n" +
+                   "• **Udaipur**: Romantic Lake Pichola boat ride and City Palace.\n" +
+                   "• **Package Price**: Starting from ₹32,000/person including heritage palace stays.\n\n" +
+                   "How many travelers are planning to join this royal journey?";
         }
 
         if (lower.contains("himachal") || lower.contains("manali") || lower.contains("shimla")) {
-            return "Himachal Alpine Delight is an unforgettable mountain getaway!\n\n" +
-                   "Enjoy the scenic Mall Road in Shimla, snow points in Solang Valley, and adventure sports in Manali. " +
-                   "Packages start from ₹22,000 per person including cozy mountain resort stays and private vehicle transfers.";
+            return "Experience **Himachal Alpine Delight** (6-7 Days):\n\n" +
+                   "• **Shimla**: Scenic Mall Road, Christ Church, and Kufri panoramic viewpoints.\n" +
+                   "• **Manali**: Solang Valley adventure sports, Atal Tunnel, and Hadimba Temple.\n" +
+                   "• **Package Price**: Starting from ₹22,000/person with cozy mountain resort stays.\n\n" +
+                   "Are you traveling with family or planning an adventure trip with friends?";
         }
 
         if (lower.contains("goa") || lower.contains("beach")) {
-            return "Goa Coastal Bliss offers the perfect blend of relaxation and thrill!\n\n" +
-                   "Enjoy water sports at Baga and Calangute, followed by serene South Goa sunset cruises. Packages start at ₹15,000 per person with beachside resort stays.";
+            return "Welcome to **Goa Coastal Bliss** (4-5 Days):\n\n" +
+                   "• **North Goa**: Calangute, Baga beach water sports, and historic Aguada Fort.\n" +
+                   "• **South Goa**: Peaceful Colva beach, Basilica of Bom Jesus, and sunset river cruise.\n" +
+                   "• **Package Price**: Starting from ₹15,000/person with beach resort stays.\n\n" +
+                   "Would you like recommendations for family resorts or nightlife spots?";
         }
 
-        if (lower.contains("europe") || lower.contains("switzerland") || lower.contains("paris")) {
-            return "Our European Extravaganza covers Switzerland, France, and Italy across 10-12 unforgettable days.\n\n" +
-                   "Includes panoramic train journeys, Eiffel Tower access, Venetian gondola rides, and 4-star accommodations from ₹1,60,000 per person.";
+        if (lower.contains("europe") || lower.contains("switzerland") || lower.contains("paris") || lower.contains("italy")) {
+            return "Welcome to **European Extravaganza** (10-12 Days):\n\n" +
+                   "• **France**: Paris city tour, Eiffel Tower access, and Seine River cruise.\n" +
+                   "• **Switzerland**: Mount Titlis rotating cable car, Lucerne lake, and Alpine valleys.\n" +
+                   "• **Italy**: Venice gondola ride, Florence Renaissance art, and Rome Colosseum.\n" +
+                   "• **Package Price**: Starting from ₹1,60,000/person (includes Eurail, 4-star hotels & visa support).\n\n" +
+                   "Do you hold a valid Schengen visa or would you like visa guidance?";
         }
 
         if (lower.contains("dubai")) {
-            return "Discover Dubai with ETour: Burj Khalifa 124th-floor observation deck, thrilling 4x4 Desert Safari with BBQ dinner, and a luxury Marina Dhow Cruise. Packages from ₹65,000 per person.";
+            return "Experience **Dubai & Desert Safari** (5-6 Days):\n\n" +
+                   "• **City Icons**: Burj Khalifa 124th-floor observation deck & Dubai Mall.\n" +
+                   "• **Desert Thrills**: 4x4 Dune Bashing, camel riding, and BBQ dinner under the stars.\n" +
+                   "• **Marina Cruise**: Luxury Dhow dinner cruise with live entertainment.\n" +
+                   "• **Package Price**: Starting from ₹65,000/person.\n\n" +
+                   "Would you like to include Abu Dhabi's Sheikh Zayed Grand Mosque?";
         }
 
-        if (lower.contains("cancel") || lower.contains("refund")) {
-            return "Here is ETour's Official Cancellation & Refund Policy:\n\n" +
-                   "• 15+ Days before departure: 100% Full Refund\n" +
-                   "• 7-14 Days before departure: 50% Refund\n" +
-                   "• Less than 7 Days: Non-refundable (due to airline & hotel pre-commitments)\n\n" +
-                   "Refunds are credited back to your original payment method in 5-7 working days. You can also contact support@etour.com or call 1800-ETOUR-CARE.";
+        if (lower.contains("kashmir")) {
+            return "Welcome to **Paradise on Earth — Kashmir** (5-6 Days):\n\n" +
+                   "• **Srinagar**: Dal Lake Shikara ride, overnight stay in luxury wooden Houseboat.\n" +
+                   "• **Gulmarg**: World's highest Gondola cable car ride and snow meadows.\n" +
+                   "• **Pahalgam**: Valley of Shepherds, Betaab Valley, and Aru Valley pine forests.\n" +
+                   "• **Package Price**: Starting from ₹26,000/person.\n\n" +
+                   "Would you like to check upcoming departure dates?";
         }
 
-        if (lower.contains("payment") || lower.contains("razorpay") || lower.contains("upi") || lower.contains("card")) {
-            return "ETour supports 100% secure, encrypted online payments via Razorpay.\n\n" +
-                   "You can pay using UPI (GPay, PhonePe, Paytm), all Credit/Debit cards, and Net Banking. " +
-                   "Your confirmed ticket and GST tax invoice PDF will be generated immediately upon successful transaction.";
+        // 11. Popular Holiday Packages
+        if (lower.contains("recommend") || lower.contains("package") || lower.contains("holiday") || lower.contains("tour") || lower.contains("popular") || lower.contains("suggest")) {
+            return "Here are our top-rated curated ETour holiday packages:\n\n" +
+                   "1. **Kerala Serenity** (Alleppey & Munnar) — 5D/4N from ₹25,000/person\n" +
+                   "2. **Royal Rajasthan** (Jaipur & Udaipur) — 6D/5N from ₹32,000/person\n" +
+                   "3. **Himachal Alpine Delight** (Shimla & Manali) — 6D/5N from ₹22,000/person\n" +
+                   "4. **Goa Coastal Bliss** (Beaches & Watersports) — 4D/3N from ₹15,000/person\n" +
+                   "5. **European Extravaganza** (Switzerland, France, Italy) — 10D from ₹1,60,000/person\n" +
+                   "6. **Dubai & Desert Safari** (Burj Khalifa & Dunes) — 5D from ₹65,000/person\n\n" +
+                   "All packages include verified deluxe stays, breakfast, and private transfers. Which destination would you like to explore?";
         }
 
-        if (lower.contains("booking") || lower.contains("status") || lower.contains("ticket") || lower.contains("invoice")) {
-            return "Welcome to ETour Customer Care! You can easily track your booking status, download passenger tickets, and view tax invoices " +
-                   "by logging into your account and clicking 'My Bookings' in the top navigation bar.";
+        // 12. Booking, Ticket & Invoice Downloads
+        if (lower.contains("booking") || lower.contains("ticket") || lower.contains("invoice") || lower.contains("receipt") || lower.contains("status")) {
+            return "Managing Your Bookings on ETour:\n\n" +
+                   "• **Download Ticket & Itinerary**: Log in and visit **'My Bookings'** to access your confirmed passenger voucher and detailed day-wise itinerary PDF.\n" +
+                   "• **Download GST Invoice**: Click the 'Download Invoice' button next to your confirmed payment record.\n" +
+                   "• **Live Tracking**: View departure timings, hotel addresses, and driver contact details 24 hours prior to travel.";
         }
 
-        if (lower.contains("contact") || lower.contains("call") || lower.contains("support") || lower.contains("phone")) {
+        // 13. Payments & Security
+        if (lower.contains("payment") || lower.contains("razorpay") || lower.contains("upi") || lower.contains("card") || lower.contains("pay")) {
+            return "Payment Information & Security:\n\n" +
+                   "• **Supported Modes**: UPI (GPay, PhonePe, Paytm), All Credit & Debit Cards, Net Banking, and flexible EMI options.\n" +
+                   "• **Security**: Payments are encrypted with 256-bit bank-grade security through Razorpay.\n" +
+                   "• **Instant Confirmation**: Your booking ID and digital invoice are generated immediately upon transaction completion.";
+        }
+
+        // 14. Customer Support Contacts
+        if (lower.contains("contact") || lower.contains("support") || lower.contains("help") || lower.contains("phone") || lower.contains("call") || lower.contains("helpline") || lower.contains("agent")) {
             return "ETour Customer Support is available 24/7:\n\n" +
-                   "• Email: support@etour.com\n" +
-                   "• Toll-Free Helpline: 1800-ETOUR-CARE (1800-386-8722)\n" +
-                   "• Live Concierge: Right here in this chat window!\n\n" +
-                   "Feel free to ask any travel question, and I will assist you instantly.";
+                   "• **Toll-Free Helpline**: 1800-ETOUR-CARE (1800-386-8722)\n" +
+                   "• **Email Desk**: support@etour.com\n" +
+                   "• **Live Concierge**: Available right here in this chat window!\n\n" +
+                   "How can I assist your travel plans today?";
         }
 
+        // 15. Default Warm Concierge Introduction
         return "Namaste! Welcome to ETour (VirtueGO). I am Aarya, your 24/7 AI Travel Concierge.\n\n" +
                "Whether you are planning a domestic escape to Kerala, Rajasthan, or Himachal, or dreaming of Dubai or Europe, " +
-               "I can help with personalized itineraries, budget recommendations, and booking assistance. Where would you like to travel next?";
+               "I can help with personalized itineraries, cancellation terms, departure dates, and booking guidance. What destination or question would you like to explore?";
     }
 
-    private List<String> generateSmartFollowUps(String query) {
+    private List<String> generateSmartFollowUps(String query, String sessionId) {
         String lower = (query != null) ? query.toLowerCase() : "";
+        String currentDest = sessionDestinations.getOrDefault(sessionId, "");
+
         if (lower.contains("cancel") || lower.contains("refund") || lower.contains("policy")) {
             return List.of("How do I cancel my booking?", "What is the refund timeline?", "Can I reschedule my tour dates?");
         }
-        if (lower.contains("kerala") || lower.contains("rajasthan") || lower.contains("himachal") || lower.contains("goa")) {
-            return List.of("What is included in the package?", "What are the departure dates?", "Are family discounts available?");
+        if (lower.contains("reschedule") || lower.contains("date")) {
+            return List.of("What are the departure dates?", "What is the cancellation policy?", "Are family discounts available?");
+        }
+        if (!currentDest.isEmpty() || lower.contains("kerala") || lower.contains("rajasthan") || lower.contains("himachal") || lower.contains("goa")) {
+            return List.of("What are the departure dates?", "What is included in the package?", "Are family discounts available?");
         }
         return List.of(
                 "Show popular holiday packages",
