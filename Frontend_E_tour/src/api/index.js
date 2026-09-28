@@ -127,10 +127,10 @@ export const healthAPI = {
 };
 
 export const customerCareAiAPI = {
-  chat: (data) => api.post('/api/ai/customer-care/chat', data),
-  recommendTours: (data) => api.post('/api/ai/customer-care/recommend-tours', data),
-  getFaq: (topic = 'cancellation') => api.get('/api/ai/customer-care/faq', { params: { topic } }),
-  getHealth: () => api.get('/api/ai/customer-care/health'),
+  chat: (data) => api.post('/api/ai/customer-care/chat', data, { timeout: 35000 }),
+  recommendTours: (data) => api.post('/api/ai/customer-care/recommend-tours', data, { timeout: 35000 }),
+  getFaq: (topic = 'cancellation') => api.get('/api/ai/customer-care/faq', { params: { topic }, timeout: 15000 }),
+  getHealth: () => api.get('/api/ai/customer-care/health', { timeout: 10000 }),
 };
 
 export default api;

@@ -73,7 +73,14 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
                 ? chatClientBuilder.defaultSystem(ETOUR_SYSTEM_PROMPT).build()
                 : (chatModel != null ? ChatClient.builder(chatModel).defaultSystem(ETOUR_SYSTEM_PROMPT).build() : null);
         this.categoryRepository = categoryRepository;
-        this.restTemplate = restTemplate != null ? restTemplate : new RestTemplate();
+        this.restTemplate = createFastRestTemplate();
+    }
+
+    private static RestTemplate createFastRestTemplate() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(1800);
+        factory.setReadTimeout(2200);
+        return new RestTemplate(factory);
     }
 
     @Override
@@ -86,19 +93,21 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
         String reply = null;
         String modelProvider = "Spring AI (Google Gemini)";
 
-        // 1. Primary path: Use Spring AI ChatClient
+        // 1. Primary path: Use Spring AI ChatClient with strict 2.5s timeout
         if (chatClient != null) {
             try {
-                reply = chatClient.prompt()
-                        .user(userQuery)
-                        .call()
-                        .content();
+                reply = java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        chatClient.prompt()
+                                .user(userQuery)
+                                .call()
+                                .content()
+                ).get(2500, java.util.concurrent.TimeUnit.MILLISECONDS);
             } catch (Exception ex) {
-                log.warn("Spring AI ChatClient call encountered an issue: {}. Attempting fallback...", ex.getMessage());
+                log.warn("Spring AI ChatClient call timed out or failed: {}. Attempting fast fallback...", ex.getMessage());
             }
         }
 
-        // 2. Secondary path: Direct Gemini REST fallback (supports preview models)
+        // 2. Secondary path: Direct Gemini REST fallback (fast timeout)
         if (reply == null || reply.isBlank()) {
             reply = callGeminiDirectRest(userQuery, ETOUR_SYSTEM_PROMPT);
             if (reply != null && !reply.isBlank()) {
@@ -106,7 +115,7 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
             }
         }
 
-        // 3. Tertiary path: Domain-grounded resilient fallback (guarantees 100% uptime)
+        // 3. Tertiary path: Domain-grounded resilient fallback (guarantees <10ms response)
         if (reply == null || reply.isBlank()) {
             reply = generateDomainFallbackReply(userQuery);
             modelProvider = "ETour Knowledge Base Engine";
@@ -141,9 +150,11 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
         String aiResponse = null;
         if (chatClient != null) {
             try {
-                aiResponse = chatClient.prompt().user(prompt).call().content();
+                aiResponse = java.util.concurrent.CompletableFuture.supplyAsync(() ->
+                        chatClient.prompt().user(prompt).call().content()
+                ).get(2500, java.util.concurrent.TimeUnit.MILLISECONDS);
             } catch (Exception e) {
-                log.warn("Recommendation AI call failed: {}", e.getMessage());
+                log.warn("Recommendation AI call timed out or failed: {}", e.getMessage());
             }
         }
 
@@ -152,11 +163,7 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
         }
 
         if (aiResponse == null || aiResponse.isBlank()) {
-            aiResponse = String.format(
-                    "For %s, a %d-day itinerary with a budget of Rs. %.0f provides a wonderful experience! " +
-                    "We recommend booking our handpicked tour package which includes deluxe accommodation, guided sightseeing, and private transport.",
-                    dest, days, budget
-            );
+            aiResponse = generateDomainTourSummary(dest, days, budget, style);
         }
 
         List<TourRecommendationResponse.TourSuggestion> suggestions = new ArrayList<>();
@@ -217,97 +224,146 @@ public class CustomerCareAiServiceImpl implements CustomerCareAiService {
                 .build()).getReply();
     }
 
+    private String generateDomainTourSummary(String dest, Integer days, Double budget, String style) {
+        return String.format(
+                "For %s, a %d-day %s with a budget of ₹%,.0f is an ideal holiday combination! " +
+                "ETour's curated package includes 4-star handpicked accommodations, private air-conditioned transport, " +
+                "complimentary daily breakfast, and a dedicated local tour manager. " +
+                "We recommend booking at least 2 weeks in advance to secure optimal flight connections and preferred room categories.",
+                dest, days, style, budget
+        );
+    }
+
     /**
      * Direct REST fallback invoking Gemini API endpoint with model resilience.
      */
     private String callGeminiDirectRest(String userQuery, String systemPrompt) {
         try {
-            // Models to try in order of responsiveness
-            List<String> modelsToTry = List.of(geminiModel, "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-flash-latest");
+            // Fast attempt on active Gemini model
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent?key=" + geminiApiKey;
 
-            for (String model : modelsToTry) {
-                try {
-                    String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + geminiApiKey;
+            Map<String, Object> userPart = Map.of("text", systemPrompt + "\n\nUser Question: " + userQuery);
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(Map.of("parts", List.of(userPart)))
+            );
 
-                    Map<String, Object> systemPart = Map.of("text", systemPrompt);
-                    Map<String, Object> userPart = Map.of("text", userQuery);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-                    Map<String, Object> requestBody = Map.of(
-                            "system_instruction", Map.of("parts", List.of(systemPart)),
-                            "contents", List.of(Map.of("parts", List.of(userPart)))
-                    );
-
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_JSON);
-                    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-                    ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-                    if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                        List candidates = (List) response.getBody().get("candidates");
-                        if (candidates != null && !candidates.isEmpty()) {
-                            Map candidate = (Map) candidates.get(0);
-                            Map content = (Map) candidate.get("content");
-                            if (content != null) {
-                                List parts = (List) content.get("parts");
-                                if (parts != null && !parts.isEmpty()) {
-                                    Map part = (Map) parts.get(0);
-                                    String text = (String) part.get("text");
-                                    if (text != null && !text.isBlank()) {
-                                        return text.trim();
-                                    }
-                                }
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                List candidates = (List) response.getBody().get("candidates");
+                if (candidates != null && !candidates.isEmpty()) {
+                    Map candidate = (Map) candidates.get(0);
+                    Map content = (Map) candidate.get("content");
+                    if (content != null) {
+                        List parts = (List) content.get("parts");
+                        if (parts != null && !parts.isEmpty()) {
+                            Map part = (Map) parts.get(0);
+                            String text = (String) part.get("text");
+                            if (text != null && !text.isBlank()) {
+                                return text.trim();
                             }
                         }
                     }
-                } catch (Exception ex) {
-                    log.debug("Model {} direct call attempt returned: {}", model, ex.getMessage());
                 }
             }
         } catch (Exception e) {
-            log.warn("Direct Gemini REST call failed: {}", e.getMessage());
+            log.debug("Direct Gemini REST call attempt returned: {}", e.getMessage());
         }
         return null;
     }
 
     private String generateDomainFallbackReply(String query) {
-        String lower = query.toLowerCase();
-        if (lower.contains("kerala") || lower.contains("south")) {
-            return "Greetings from ETour! Kerala is one of our most loved destinations. " +
-                   "Our 6-Day Kerala Serenity package covers Cochin, Munnar tea plantations, and an overnight houseboat stay in Alleppey. " +
-                   "Prices start from ₹28,500 per person including hotels and private transfers. Would you like to view available departure dates?";
+        String lower = (query != null) ? query.toLowerCase() : "";
+
+        if (lower.contains("recommend") || lower.contains("package") || lower.contains("holiday") || lower.contains("tour") || lower.contains("suggest")) {
+            return "Here are our most popular curated ETour holiday packages for you:\n\n" +
+                   "• Kerala Serenity (Alleppey & Munnar) — 5 Days / 4 Nights from ₹25,000/person\n" +
+                   "• Royal Rajasthan (Jaipur & Udaipur) — 6 Days / 5 Nights from ₹32,000/person\n" +
+                   "• Himachal Alpine Delight (Shimla & Manali) — 6 Days / 5 Nights from ₹24,000/person\n" +
+                   "• Goa Coastal Bliss (Beaches & Water Sports) — 4 Days / 3 Nights from ₹15,000/person\n" +
+                   "• European Extravaganza (Switzerland, France, Italy) — 10 Days from ₹1,60,000/person\n" +
+                   "• Dubai & Desert Safari (Burj Khalifa & Marina) — 5 Days from ₹65,000/person\n\n" +
+                   "All packages include verified deluxe stays, daily breakfast, and private transport. Which destination would you like to explore?";
         }
-        if (lower.contains("rajasthan") || lower.contains("jaipur") || lower.contains("fort")) {
-            return "Khamma Ghani! Explore our Royal Rajasthan Tour featuring Jaipur's Amber Fort, Jodhpur's blue streets, and Udaipur's Lake Pichola. " +
-                   "Packages range from ₹32,000 to ₹54,000 with heritage palace stays. How many travelers are joining the trip?";
+
+        if (lower.contains("kerala") || lower.contains("munnar") || lower.contains("alleppey")) {
+            return "Greetings from ETour! Kerala is one of our most loved domestic destinations.\n\n" +
+                   "Our 6-Day Kerala Serenity package covers Cochin, Munnar tea hills, and an overnight houseboat cruise in Alleppey. " +
+                   "Prices start from ₹28,500 per person including 4-star hotels, breakfast & dinner, and private AC transfers. Would you like to check available departure dates?";
         }
+
+        if (lower.contains("rajasthan") || lower.contains("jaipur") || lower.contains("udaipur") || lower.contains("jodhpur")) {
+            return "Khamma Ghani! Explore our Royal Rajasthan Tour featuring Jaipur's Amber Fort, Jodhpur's blue streets, and Udaipur's Lake Pichola.\n\n" +
+                   "Packages range from ₹32,000 to ₹54,000 per person with heritage palace stays and guided excursions. How many travelers are planning to join?";
+        }
+
+        if (lower.contains("himachal") || lower.contains("manali") || lower.contains("shimla")) {
+            return "Himachal Alpine Delight is an unforgettable mountain getaway!\n\n" +
+                   "Enjoy the scenic Mall Road in Shimla, snow points in Solang Valley, and adventure sports in Manali. " +
+                   "Packages start from ₹22,000 per person including cozy mountain resort stays and private vehicle transfers.";
+        }
+
+        if (lower.contains("goa") || lower.contains("beach")) {
+            return "Goa Coastal Bliss offers the perfect blend of relaxation and thrill!\n\n" +
+                   "Enjoy water sports at Baga and Calangute, followed by serene South Goa sunset cruises. Packages start at ₹15,000 per person with beachside resort stays.";
+        }
+
+        if (lower.contains("europe") || lower.contains("switzerland") || lower.contains("paris")) {
+            return "Our European Extravaganza covers Switzerland, France, and Italy across 10-12 unforgettable days.\n\n" +
+                   "Includes panoramic train journeys, Eiffel Tower access, Venetian gondola rides, and 4-star accommodations from ₹1,60,000 per person.";
+        }
+
+        if (lower.contains("dubai")) {
+            return "Discover Dubai with ETour: Burj Khalifa 124th-floor observation deck, thrilling 4x4 Desert Safari with BBQ dinner, and a luxury Marina Dhow Cruise. Packages from ₹65,000 per person.";
+        }
+
         if (lower.contains("cancel") || lower.contains("refund")) {
-            return "Here is ETour's cancellation policy:\n" +
+            return "Here is ETour's Official Cancellation & Refund Policy:\n\n" +
                    "• 15+ Days before departure: 100% Full Refund\n" +
                    "• 7-14 Days before departure: 50% Refund\n" +
-                   "• Less than 7 Days: Non-refundable\n" +
-                   "You can manage cancellations directly from your Booking History tab or write to support@etour.com.";
+                   "• Less than 7 Days: Non-refundable (due to airline & hotel pre-commitments)\n\n" +
+                   "Refunds are credited back to your original payment method in 5-7 working days. You can also contact support@etour.com or call 1800-ETOUR-CARE.";
         }
-        if (lower.contains("booking") || lower.contains("status") || lower.contains("ticket")) {
-            return "Welcome to ETour Customer Support! You can easily track your booking status, download passenger tickets, and view payment receipts " +
-                   "by logging into your account and visiting the 'My Bookings' section. If you have your Booking ID handy, share it with us!";
+
+        if (lower.contains("payment") || lower.contains("razorpay") || lower.contains("upi") || lower.contains("card")) {
+            return "ETour supports 100% secure, encrypted online payments via Razorpay.\n\n" +
+                   "You can pay using UPI (GPay, PhonePe, Paytm), all Credit/Debit cards, and Net Banking. " +
+                   "Your confirmed ticket and GST tax invoice PDF will be generated immediately upon successful transaction.";
         }
-        return "Hello and welcome to ETour (VirtueGO)! I am Aarya, your personal travel concierge. " +
-               "Whether you are planning a relaxing domestic getaway to Kerala or Himachal, or dreaming of an international adventure to Europe or Dubai, " +
-               "I am here to guide you with packages, itineraries, and booking assistance. Where would you like to travel next?";
+
+        if (lower.contains("booking") || lower.contains("status") || lower.contains("ticket") || lower.contains("invoice")) {
+            return "Welcome to ETour Customer Care! You can easily track your booking status, download passenger tickets, and view tax invoices " +
+                   "by logging into your account and clicking 'My Bookings' in the top navigation bar.";
+        }
+
+        if (lower.contains("contact") || lower.contains("call") || lower.contains("support") || lower.contains("phone")) {
+            return "ETour Customer Support is available 24/7:\n\n" +
+                   "• Email: support@etour.com\n" +
+                   "• Toll-Free Helpline: 1800-ETOUR-CARE (1800-386-8722)\n" +
+                   "• Live Concierge: Right here in this chat window!\n\n" +
+                   "Feel free to ask any travel question, and I will assist you instantly.";
+        }
+
+        return "Namaste! Welcome to ETour (VirtueGO). I am Aarya, your 24/7 AI Travel Concierge.\n\n" +
+               "Whether you are planning a domestic escape to Kerala, Rajasthan, or Himachal, or dreaming of Dubai or Europe, " +
+               "I can help with personalized itineraries, budget recommendations, and booking assistance. Where would you like to travel next?";
     }
 
     private List<String> generateSmartFollowUps(String query) {
-        String lower = query.toLowerCase();
+        String lower = (query != null) ? query.toLowerCase() : "";
         if (lower.contains("cancel") || lower.contains("refund") || lower.contains("policy")) {
             return List.of("How do I cancel my booking?", "What is the refund timeline?", "Can I reschedule my tour dates?");
         }
-        if (lower.contains("kerala") || lower.contains("rajasthan") || lower.contains("himachal")) {
+        if (lower.contains("kerala") || lower.contains("rajasthan") || lower.contains("himachal") || lower.contains("goa")) {
             return List.of("What is included in the package?", "What are the departure dates?", "Are family discounts available?");
         }
         return List.of(
-                "Show top domestic packages",
-                "How does the booking & cancellation policy work?",
-                "Recommend a budget holiday under ₹30,000"
+                "Show popular holiday packages",
+                "How does the cancellation policy work?",
+                "Recommend a budget trip under ₹35,000"
         );
     }
 }
