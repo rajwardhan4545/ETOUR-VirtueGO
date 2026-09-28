@@ -16,7 +16,7 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/ai/customer-care")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@CrossOrigin(originPatterns = "*", allowedHeaders = "*", allowCredentials = "true")
 public class CustomerCareAiController {
 
     private final CustomerCareAiService customerCareAiService;

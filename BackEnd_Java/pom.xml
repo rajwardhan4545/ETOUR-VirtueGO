@@ -135,6 +135,28 @@
 			<groupId>com.razorpay</groupId>
 			<artifactId>razorpay-java</artifactId>
 			<version>1.4.3</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.squareup.okhttp3</groupId>
+					<artifactId>okhttp</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.squareup.okhttp3</groupId>
+					<artifactId>logging-interceptor</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- Modern OkHttp for Spring AI Google GenAI & Razorpay compatibility -->
+		<dependency>
+			<groupId>com.squareup.okhttp3</groupId>
+			<artifactId>okhttp</artifactId>
+			<version>4.12.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.squareup.okhttp3</groupId>
+			<artifactId>logging-interceptor</artifactId>
+			<version>4.12.0</version>
 		</dependency>
 
 		<!-- PDF -->
