@@ -3,6 +3,8 @@ package com.example.controller;
 import com.example.dto.BookingCreateRequestDTO;
 import com.example.dto.BookingResponseDTO;
 import com.example.services.BookingService;
+import com.example.services.InvoicePdfService;
+import com.example.services.PaymentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +32,12 @@ class BookingControllerTest {
     @Mock
     private BookingService bookingService;
 
+    @Mock
+    private InvoicePdfService invoicePdfService;
+
+    @Mock
+    private PaymentService paymentService;
+
     @InjectMocks
     private BookingController bookingController;
 
@@ -56,7 +64,7 @@ class BookingControllerTest {
         req.setTourId(22);
         req.setStatusId(1);
 
-        mockMvc.perform(post("/api/bookings")
+        mockMvc.perform(post("/api/Booking")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -71,7 +79,7 @@ class BookingControllerTest {
 
         Mockito.when(bookingService.getBookingById(1001)).thenReturn(response);
 
-        mockMvc.perform(get("/api/bookings/1001"))
+        mockMvc.perform(get("/api/Booking/1001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bookingId").value(1001));
     }

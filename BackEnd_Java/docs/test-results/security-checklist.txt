@@ -1,0 +1,31 @@
+﻿SECURITY CHECKLIST
+Generated: 10/25/2026 18:50:49
+
+1. BCrypt Password Hashing
+   STATUS: FOUND
+   Files: PasswordConfig.java, AuthService.java
+   Pattern matched: BCryptPasswordEncoder / PasswordEncoder
+
+2. Role-Based Access Control (@PreAuthorize / @Secured / hasRole / ROLE_)
+   STATUS: FOUND
+   Files: JwtAuthFilter.java
+   Pattern matched: ROLE_ / hasRole
+
+3. Input Validation (@Valid / @NotNull / @NotBlank / @Size / @Pattern)
+   STATUS: FOUND
+   Files: AuthController.java, CustomerDTO.java
+   Pattern matched: @Valid, @NotNull, @NotBlank, etc.
+
+4. JWT Filter / JWT Utility
+   STATUS: FOUND
+   Files: JwtAuthFilter.java (filter), JwtUtil.java (utility)
+   Also referenced in: OAuth2SuccessHandler.java, SecurityConfig.java, AuthService.java
+
+5. CORS Configuration
+   STATUS: FOUND
+   Files: CustomerCareAiController.java (@CrossOrigin), SearchController.java (@CrossOrigin)
+   Also: application.properties has management.endpoints.web.cors.* config
+   Note: No dedicated CorsConfigurationSource bean found in source scan, but @CrossOrigin used on controllers.
+
+6. Spring Security configured? YES - spring-boot-starter-security in pom.xml
+7. OAuth2 configured? YES - spring-boot-starter-security-oauth2-client in pom.xml (Google Login)

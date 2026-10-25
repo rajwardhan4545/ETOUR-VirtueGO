@@ -1,0 +1,14 @@
+﻿ACTUATOR HEALTH CHECK
+Generated: 10/25/2026 18:50:59
+
+From application.properties:
+management.endpoints.web.exposure.include=health,metrics,env,info,booking-stats
+management.endpoint.health.show-details=always
+
+Expected URL when running: http://localhost:8080/actuator/health
+
+LIVE CHECK RESULT:
+Command: Invoke-WebRequest -Uri "http://localhost:8080/actuator/health" -TimeoutSec 5
+Result: SERVICE NOT RUNNING - "Unable to connect to the remote server"
+
+The app is not currently running; health endpoint could not be tested live.

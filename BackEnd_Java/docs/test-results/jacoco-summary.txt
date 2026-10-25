@@ -1,0 +1,14 @@
+﻿JACOCO COVERAGE SUMMARY
+Generated: 10/25/2026 18:50:34
+
+STATUS: JaCoCo is NOT configured in pom.xml.
+
+Evidence: Searched pom.xml for 'jacoco' - no matches found.
+The pom.xml uses only: spring-boot-maven-plugin (no jacoco-maven-plugin configured).
+
+The spring-boot-starter-test dependency is present.
+Mockito (mockito-core 5.10.0, mockito-junit-jupiter 5.10.0) is included.
+
+CLAIM CHECK: "91% coverage across 8 service classes"
+RESULT: CANNOT BE VERIFIED - JaCoCo is not configured, no coverage report exists.
+To add JaCoCo, insert the jacoco-maven-plugin in the <build><plugins> section of pom.xml.

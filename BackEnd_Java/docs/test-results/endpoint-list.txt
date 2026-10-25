@@ -1,0 +1,54 @@
+﻿E-TOUR REST ENDPOINT LIST
+Generated: 10/25/2026 18:50:19
+Source: src/main/**/*Controller.java
+
+Controller              | HTTP Method  | Path
+------------------------|--------------|----------------------------------------------
+CustomerCareAiController| POST         | /api/ai/customer-care/chat
+CustomerCareAiController| POST         | /api/ai/customer-care/recommend-tours
+CustomerCareAiController| GET          | /api/ai/customer-care/faq
+CustomerCareAiController| GET          | /api/ai/customer-care/health
+AuthController          | POST         | /api/auth/register
+AuthController          | POST         | /api/auth/login
+AuthController          | POST         | /api/auth/forgot-password
+AuthController          | POST         | /api/auth/reset-password
+AuthController          | POST         | /api/auth/google-login
+BookingController       | GET          | /api/Booking
+BookingController       | POST         | /api/Booking
+BookingController       | GET          | /api/Booking/customer/{customerId}
+BookingController       | GET          | /api/Booking/{bookingId}
+BookingController       | GET          | /api/Booking/status/{bookingId}
+BookingController       | GET          | /api/Booking/invoice/{bookingId}
+CategoryController      | GET          | /api/categories/home/ids
+CategoryController      | GET          | /api/categories/home
+CategoryController      | GET          | /api/categories/{catCode}
+CategoryController      | GET          | /api/categories/{subcatCode}/ids
+CustomerController      | GET          | /api/customer/profile
+CustomerController      | PUT          | /api/customer/profile
+CustomerController      | GET          | /api/customer/id
+CustomerController      | POST         | /api/customer/change-password
+EmailController         | POST         | /api/email/booking-confirmation
+EmailController         | POST         | /api/email/invoice
+InvoiceController       | GET          | /api/invoices/{bookingId}/download
+ItineraryUploadCtrl     | POST         | /api/admin/itineraries/upload-csv
+PassengerController     | POST         | /api/passenger/add
+PassengerController     | GET          | /api/passenger/booking/{bookingId}
+PassengerController     | GET          | /api/passenger/{id}
+PaymentController       | POST         | /api/payment/pay
+PaymentController       | GET          | /api/payment/{paymentId}
+PaymentController       | GET          | /api/payment/receipt/{bookingId}
+PaymentGatewayCtrl      | POST         | /payment-gateway/confirm-payment
+PaymentGatewayCtrl      | POST         | /payment-gateway/create-order
+PaymentGatewayCtrl      | POST         | /payment-gateway/webhook
+RegistrationClientCtrl  | POST         | /client/register
+SearchController        | GET          | /api/Search/name/{query}
+SearchController        | GET          | /api/Search/date
+SearchController        | GET          | /api/Search/cost/{maxCost}
+TourController          | GET          | /api/tours
+TourController          | GET          | /api/tours/tour-id
+TourController          | GET          | /api/tours/{identifier}
+TourController          | GET          | /api/tours/details/{catId}
+TourController          | POST         | /api/tours/by-category-ids
+
+TOTAL ENDPOINTS: 45
+Claim "15+ REST APIs": TRUE (45 found, which is 15+)

@@ -1,0 +1,397 @@
+{
+	"info": {
+		"_postman_id": "e8d64119-e9ef-4bf2-9844-3199c9c1b3c9",
+		"name": "E-Tour Booking API Collection",
+		"description": "Postman collection covering authentication, tour catalog, searching, booking lifecycle, passenger management, and actuators for the E-Tour application.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Rajesh\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"rajesh.sharma@example.com\",\n  \"phone\": \"9876543210\",\n  \"password\": \"Password@123\",\n  \"address\": \"123 MG Road, Pune\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login (Extract JWT)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.environment.set(\"jwt_token\", jsonData.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"rajesh.sharma@example.com\",\n  \"password\": \"Password@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"rajesh.sharma@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "forgot-password"]
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"newPassword\": \"NewPassword@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "reset-password"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories & Tours",
+			"item": [
+				{
+					"name": "Get Home Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/home",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "home"]
+						}
+					}
+				},
+				{
+					"name": "Get Subcategories by CatCode",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/IND",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "categories", "IND"]
+						}
+					}
+				},
+				{
+					"name": "Get Home Page Tours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours"]
+						}
+					}
+				},
+				{
+					"name": "Get Tours by SubCategory",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/MAH",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "MAH"]
+						}
+					}
+				},
+				{
+					"name": "Get Tour Details by Category ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/details/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "details", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Search Tours by Query Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/Search/name/kerala",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Search", "name", "kerala"]
+						}
+					}
+				},
+				{
+					"name": "Search Tours by Max Cost",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/Search/cost/50000",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Search", "cost", "50000"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Booking Lifecycle",
+			"item": [
+				{
+					"name": "Get All Bookings (Secured)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/Booking",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Booking"]
+						}
+					}
+				},
+				{
+					"name": "Create Booking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerId\": 1,\n  \"tourId\": 1,\n  \"noOfPax\": 2,\n  \"tourAmount\": 25000.00,\n  \"taxes\": 2500.00,\n  \"statusId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/Booking",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Booking"]
+						}
+					}
+				},
+				{
+					"name": "Get Booking Summary",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/Booking/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Booking", "1"]
+						}
+					}
+				},
+				{
+					"name": "Get Payment Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/Booking/status/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "Booking", "status", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Passengers",
+			"item": [
+				{
+					"name": "Add Passenger to Booking",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"bookingId\": 1,\n  \"paxName\": \"Sunil Verma\",\n  \"paxBirthdate\": \"1990-05-15\",\n  \"paxType\": \"Adult\",\n  \"paxAmount\": 12500.00\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/passenger/add",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "passenger", "add"]
+						}
+					}
+				},
+				{
+					"name": "Get Passengers by Booking ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/passenger/booking/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "passenger", "booking", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Customer Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/customer/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "customer", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Rajesh\",\n  \"lastName\": \"Sharma\",\n  \"phone\": \"9876543210\",\n  \"address\": \"456 FC Road, Pune\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/customer/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "customer", "profile"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Observability & Actuator",
+			"item": [
+				{
+					"name": "Health Probe",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Custom Booking Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/booking-stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["actuator", "booking-stats"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

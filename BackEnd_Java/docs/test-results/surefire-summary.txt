@@ -1,0 +1,44 @@
+﻿-------------------------------------------------------------------------------
+Test set: com.example.backend_java.BackEndJavaApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 20.69 s -- in com.example.backend_java.BackEndJavaApplicationTests
+-------------------------------------------------------------------------------
+Test set: com.example.controller.BookingControllerTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.235 s -- in com.example.controller.BookingControllerTest
+-------------------------------------------------------------------------------
+Test set: com.example.integration.ETourIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.785 s -- in com.example.integration.ETourIntegrationTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.AuthServiceTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.932 s -- in com.example.services.AuthServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.BookingServiceTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.355 s -- in com.example.services.BookingServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.BookingStatusServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.144 s -- in com.example.services.BookingStatusServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.CategoryServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.176 s -- in com.example.services.CategoryServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.PassengerServiceTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.153 s -- in com.example.services.PassengerServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.PaymentServiceTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.181 s -- in com.example.services.PaymentServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.SearchServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.157 s -- in com.example.services.SearchServiceTest
+-------------------------------------------------------------------------------
+Test set: com.example.services.TourServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.644 s -- in com.example.services.TourServiceTest
